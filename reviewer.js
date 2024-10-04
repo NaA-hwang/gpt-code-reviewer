@@ -20,6 +20,18 @@ import * as dotenv from 'dotenv';
         apiKey: process.env.OPENAI_API_KEY
     });;
 
+    // PR의 최신 커밋 SHA 가져오기
+    async function getCommitId(owner, repo, pull_number) {
+        const { data: commits } = await octokit.pulls.listCommits({
+            owner,
+            repo,
+            pull_number
+        });
+
+        // 최신 커밋의 SHA 반환
+        return commits[commits.length - 1].sha;
+    }
+
     // PR의 diff 가져오기
     async function getDiff(owner, repo, pull_number) {
         const { data: files } = await octokit.pulls.listFiles({
@@ -89,10 +101,11 @@ import * as dotenv from 'dotenv';
     // PR에 리뷰 게시
     async function postReviewComment(owner, repo, pull_number, file, position, review_body) {
         await octokit.pulls.createReviewComment({
-            owner,
-            repo,
-            pull_number,
+            owner: owner,
+            repo: repo,
+            pull_number: pull_number,
             body: review_body,
+            commit_id: commit_id,
             path: file,
             line: position
         });
@@ -102,12 +115,13 @@ import * as dotenv from 'dotenv';
     // 전체 리뷰 생성 및 게시 프로세스
     async function reviewPullRequest(owner, repo, pull_number) {
         try {
+            const commit_id = await getCommitId(owner, repo, pull_number); // 최신 커밋 SHA 가져오기
             const changes = await getDiff(owner, repo, pull_number);
 
             // 각 코드 블록별로 리뷰 생성 및 코멘트 게시
             for (const change of changes) {
                 const review = await generateReview(change);
-                await postReviewComment(owner, repo, pull_number, change.file, change.position, review);
+                await postReviewComment(owner, repo, pull_number, commit_id, change.file, change.position, review);
             }
 
             console.log("Review comments posted successfully!");
