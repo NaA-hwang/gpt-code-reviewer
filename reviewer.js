@@ -1,34 +1,37 @@
-require('dotenv').config();
-const { Octokit } = require("@octokit/rest");
-const { Configuration, OpenAIApi } = require("openai");
+(async () => {
+    const { Octokit } = await import("@octokit/rest");
+    const { Configuration, OpenAIApi } = await import("openai");
+    require('dotenv').config();
 
-// GitHub와 OpenAI API 설정
-const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN  // GitHub 토큰
-});
-
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,  // OpenAI API 키
-});
-const openai = new OpenAIApi(configuration);
-
-// PR의 diff 가져오기
-async function getDiff(owner, repo, pull_number) {
-    const { data: files } = await octokit.pulls.listFiles({
-        owner,
-        repo,
-        pull_number
+    // GitHub와 OpenAI API 설정
+    const octokit = new Octokit({
+        auth: process.env.GITHUB_TOKEN  // GitHub 토큰
     });
 
-    let diff = "";
-    files.forEach(file => {
-        if (file.patch) {
-            diff += `File: ${file.filename}\n${file.patch}\n\n`;
-        }
+    const configuration = new Configuration({
+        apiKey: process.env.OPENAI_API_KEY,  // OpenAI API 키
     });
+    const openai = new OpenAIApi(configuration);
 
-    return diff;
-}
+    // PR의 diff 가져오기
+    async function getDiff(owner, repo, pull_number) {
+        const { data: files } = await octokit.pulls.listFiles({
+            owner,
+            repo,
+            pull_number
+        });
+
+        let diff = "";
+        files.forEach(file => {
+            if (file.patch) {
+                diff += `File: ${file.filename}\n${file.patch}\n\n`;
+            }
+        });
+
+        return diff;
+    }
+
+})();
 
 // OpenAI API를 통해 코드 리뷰 생성
 async function generateReview(diff) {
