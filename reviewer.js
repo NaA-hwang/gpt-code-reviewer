@@ -1,6 +1,6 @@
 (async () => {
     const { Octokit } = await import("@octokit/rest");
-    const { Configuration, OpenAIApi } = await import("openai");
+    const OpenAI = await import("openai");
     require('dotenv').config();
 
     // GitHub와 OpenAI API 설정
@@ -8,9 +8,9 @@
         auth: process.env.GITHUB_TOKEN  // GitHub 토큰
     });
 
-    const openai = new OpenAIApi({
+    const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY
-    });
+    });;
 
     // PR의 diff 가져오기
     async function getDiff(owner, repo, pull_number) {
@@ -55,7 +55,7 @@
         ${diff}
         `;
 
-        const response = await openai.createChatCompletion({
+        const response = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [{ role: "system", content: prompt }],
             max_tokens: 1000,
