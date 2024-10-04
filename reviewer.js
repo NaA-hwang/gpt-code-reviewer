@@ -69,7 +69,7 @@ import * as dotenv from 'dotenv';
             temperature: 0,
         });
 
-        return response.data.choices[0].message.content;
+        return response.choices[0].message.content;
     }
 
     // PR에 리뷰 게시
