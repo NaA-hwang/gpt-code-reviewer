@@ -61,7 +61,7 @@ import * as dotenv from 'dotenv';
     }
 
     // OpenAI API를 통해 코드 리뷰 생성
-    async function generateReview(diff) {
+    async function generateReview(line) {
         const prompt = `
         You should answer in Korean.
         You are a strict and perfect code reviewer. You cannot tell any lies.
@@ -85,7 +85,7 @@ import * as dotenv from 'dotenv';
         Your answer should be in Korean.
 
         Code to review:
-        ${diff}
+        ${line}
         `;
 
         const response = await openai.chat.completions.create({
@@ -120,7 +120,7 @@ import * as dotenv from 'dotenv';
 
             // 각 코드 블록별로 리뷰 생성 및 코멘트 게시
             for (const change of changes) {
-                const review = await generateReview(change);
+                const review = await generateReview(change.line);
                 await postReviewComment(owner, repo, pull_number, commit_id, change.file, change.position, review);
             }
 
