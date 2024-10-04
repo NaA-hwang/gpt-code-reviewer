@@ -99,7 +99,7 @@ import * as dotenv from 'dotenv';
     }
 
     // PR에 리뷰 게시
-    async function postReviewComment(owner, repo, pull_number, file, position, review_body) {
+    async function postReviewComment(owner, repo, pull_number, commit_id, file, position, review_body) {
         await octokit.pulls.createReviewComment({
             owner: owner,
             repo: repo,
