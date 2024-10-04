@@ -1,4 +1,11 @@
 {
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node reviewer.js"
+  },
   "dependencies": {
     "@octokit/rest": "^21.0.2",
     "dotenv": "^16.4.5",
