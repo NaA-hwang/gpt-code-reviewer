@@ -8,9 +8,6 @@
         auth: process.env.GITHUB_TOKEN  // GitHub 토큰
     });
 
-    const configuration = new Configuration({
-        apiKey: process.env.OPENAI_API_KEY,  // OpenAI API 키
-    });
     const openai = new OpenAIApi({
         apiKey: process.env.OPENAI_API_KEY
     });
