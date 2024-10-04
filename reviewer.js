@@ -28,19 +28,30 @@ import * as dotenv from 'dotenv';
             pull_number
         });
 
-        let diff = "";
+        let changes = [];
         files.forEach(file => {
             if (file.patch) {
-                diff += `File: ${file.filename}\n${file.patch}\n\n`;
+                const patchLines = file.patch.split('\n');
+                let lineNumber = 0;
+                patchLines.forEach((line, index) => {
+                    if (line.startsWith('+') && !line.startsWith('+++')) { // 추가된 코드 라인
+                        changes.push({
+                            file: file.filename,
+                            position: index + 1, // 해당 라인의 위치
+                            line: line
+                        });
+                    }
+                });
             }
         });
 
-        return diff;
+        return changes;
     }
 
     // OpenAI API를 통해 코드 리뷰 생성
     async function generateReview(diff) {
         const prompt = `
+        You should answer in Korean.
         You are a strict and perfect code reviewer. You cannot tell any lies.
         Please evaluate the code added or changed through Pull Requests.
 
@@ -59,6 +70,8 @@ import * as dotenv from 'dotenv';
         - Security Issue
         - Optimization
 
+        Your answer should be in Korean.
+
         Code to review:
         ${diff}
         `;
@@ -74,23 +87,30 @@ import * as dotenv from 'dotenv';
     }
 
     // PR에 리뷰 게시
-    async function postReview(owner, repo, pull_number, review_body) {
-        await octokit.pulls.createReview({
+    async function postReviewComment(owner, repo, pull_number, file, position, review_body) {
+        await octokit.pulls.createReviewComment({
             owner,
             repo,
             pull_number,
             body: review_body,
-            event: "COMMENT"
+            path: file,
+            line: position
         });
     }
+
 
     // 전체 리뷰 생성 및 게시 프로세스
     async function reviewPullRequest(owner, repo, pull_number) {
         try {
-            const diff = await getDiff(owner, repo, pull_number);
-            const review = await generateReview(diff);
-            await postReview(owner, repo, pull_number, review);
-            console.log("Review posted successfully!");
+            const changes = await getDiff(owner, repo, pull_number);
+
+            // 각 코드 블록별로 리뷰 생성 및 코멘트 게시
+            for (const change of changes) {
+                const review = await generateReview(change);
+                await postReviewComment(owner, repo, pull_number, change.file, change.position, review);
+            }
+
+            console.log("Review comments posted successfully!");
         } catch (error) {
             console.error("Error:", error);
         }
