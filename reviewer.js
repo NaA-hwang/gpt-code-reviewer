@@ -105,10 +105,9 @@ import * as dotenv from 'dotenv';
             repo: repo,
             pull_number: pull_number,
             body: review_body,
-            commit_id: commit_id,
             path: file,
-            line: position,
-            subject_type: 'line'
+            position: position,  // diff 내에서의 줄 위치
+            commit_id: commit_id  // 최신 커밋 SHA 추가
         });
     }
 
