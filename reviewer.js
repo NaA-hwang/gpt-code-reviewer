@@ -44,16 +44,34 @@ import * as dotenv from 'dotenv';
         files.forEach(file => {
             if (file.patch) {
                 const patchLines = file.patch.split('\n');
-                let lineNumber = 0;
+                let currentBlock = null;
+
                 patchLines.forEach((line, index) => {
-                    if (line.startsWith('+') && !line.startsWith('+++')) { // 추가된 코드 라인
-                        changes.push({
-                            file: file.filename,
-                            position: index + 1, // 해당 라인의 위치
-                            line: line
-                        });
+                    if (line.startsWith('+') && !line.startsWith('+++')) {
+                        // 블록이 없으면 새 블록 시작
+                        if (!currentBlock) {
+                            currentBlock = {
+                                file: file.filename,
+                                start_position: index + 1, // 첫 라인의 위치
+                                lines: []
+                            };
+                        }
+                        currentBlock.lines.push(line);  // 블록에 라인 추가
+                    } else {
+                        // 연속된 + 라인 끝, 블록을 저장하고 초기화
+                        if (currentBlock) {
+                            currentBlock.end_position = index;  // 마지막 라인의 위치
+                            changes.push(currentBlock);
+                            currentBlock = null;
+                        }
                     }
                 });
+
+                // 마지막 블록 처리
+                if (currentBlock) {
+                    currentBlock.end_position = patchLines.length;
+                    changes.push(currentBlock);
+                }
             }
         });
 
@@ -61,31 +79,31 @@ import * as dotenv from 'dotenv';
     }
 
     // OpenAI API를 통해 코드 리뷰 생성
-    async function generateReview(line) {
+    async function generateReview(block) {
         const prompt = `
         You should answer in Korean.
         You are a strict and perfect code reviewer. You cannot tell any lies.
         Please evaluate the code added or changed through Pull Requests.
 
-        According to the given evaluation criteria, if a code patch corresponds to any of the issues below,
+        According to the given evaluation criteria, if a code patch corresponds to any of the issues below, give the user a feedback.
 
-        There are four evaluation criteria. If multiple issues correspond to a single criteria , you should address them in a detailed manner:
+        There are four evaluation criteria. If multiple issues correspond to a single criteria, you should address them in a detailed manner:
             - Feedback should describe what the issue is according to the evaluation criteria.
             - Relevant_Lines should be written as "[line_num]-[line_num]", indicating the range of lines where the issue occurs.
             - Suggested_Code should only include the revised code based on the feedback.
 
-        If there are no issues, return "No Issues Found".
+        If there are no issues, DO NOT SAY ANYTHING. In that case, your asnwer has to be empty.
 
         Evaluation criteria are:
-        - Pre-condition_check
-        - Runtime Error Check
-        - Security Issue
-        - Optimization
+        - Pre-condition_check: Check whether a function or method has the correct state or range of values for the variables needed to operate properly.
+        - Runtime Error Check: Check code for potential runtime errors and identify other possible risks.
+        - Security Issue: Check if the code uses modules with serious security flaws or contains security vulnerabilities.
+        - Optimization: Check for optimization points in the code patch. If the code is deemed to have performance issues, recommend optimized code.
 
         Your answer should be in Korean.
 
         Code to review:
-        ${line}
+        ${block.lines.join('\n') }
         `;
 
         const response = await openai.chat.completions.create({
@@ -99,14 +117,14 @@ import * as dotenv from 'dotenv';
     }
 
     // PR에 리뷰 게시
-    async function postReviewComment(owner, repo, pull_number, commit_id, file, position, review_body) {
+    async function postReviewComment(owner, repo, pull_number, commit_id, file, start_position, review_body) {
         await octokit.pulls.createReviewComment({
             owner: owner,
             repo: repo,
             pull_number: pull_number,
             body: review_body,
             path: file,
-            position: position,  // diff 내에서의 줄 위치
+            position: start_position,  // 첫 라인의 위치
             commit_id: commit_id  // 최신 커밋 SHA 추가
         });
     }
@@ -118,10 +136,10 @@ import * as dotenv from 'dotenv';
             const commit_id = await getCommitId(owner, repo, pull_number); // 최신 커밋 SHA 가져오기
             const changes = await getDiff(owner, repo, pull_number);
 
-            // 각 코드 블록별로 리뷰 생성 및 코멘트 게시
-            for (const change of changes) {
-                const review = await generateReview(change.line);
-                await postReviewComment(owner, repo, pull_number, commit_id, change.file, change.position, review);
+            // 각 블록별로 리뷰 생성 및 코멘트 게시
+            for (const block of changes) {
+                const review = await generateReview(block); // 블록 자체 전달
+                await postReviewComment(owner, repo, pull_number, commit_id, block.file, block.start_position, review);
             }
 
             console.log("Review comments posted successfully!");
