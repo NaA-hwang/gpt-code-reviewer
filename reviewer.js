@@ -107,7 +107,8 @@ import * as dotenv from 'dotenv';
             body: review_body,
             commit_id: commit_id,
             path: file,
-            line: position
+            line: position,
+            subject_type: 'line'
         });
     }
 
