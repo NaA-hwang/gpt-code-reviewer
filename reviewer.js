@@ -1,6 +1,6 @@
 (async () => {
     const { Octokit } = await import("@octokit/rest");
-    const OpenAI = await import("openai");
+    const OpenAI = (await import("openai")).default;
     require('dotenv').config();
 
     // GitHub와 OpenAI API 설정
