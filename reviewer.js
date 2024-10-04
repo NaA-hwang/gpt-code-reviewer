@@ -1,9 +1,12 @@
 import fetch from "node-fetch";
+import * as dotenv from 'dotenv';
 
 (async () => {
     const { Octokit } = await import("@octokit/rest");
     const OpenAI = (await import("openai")).default;
-    require('dotenv').config();
+    
+    // dotenv 설정
+    dotenv.config();
 
     // GitHub와 OpenAI API 설정
     const octokit = new Octokit({
