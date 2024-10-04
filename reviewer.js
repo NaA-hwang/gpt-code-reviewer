@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 (async () => {
     const { Octokit } = await import("@octokit/rest");
     const OpenAI = (await import("openai")).default;
@@ -5,7 +7,9 @@
 
     // GitHub와 OpenAI API 설정
     const octokit = new Octokit({
-        auth: process.env.GITHUB_TOKEN  // GitHub 토큰
+        request: {
+            fetch: fetch,
+        }
     });
 
     const openai = new OpenAI({
