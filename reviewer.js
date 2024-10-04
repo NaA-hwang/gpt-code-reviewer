@@ -11,7 +11,9 @@
     const configuration = new Configuration({
         apiKey: process.env.OPENAI_API_KEY,  // OpenAI API 키
     });
-    const openai = new OpenAIApi(configuration);
+    const openai = new OpenAIApi({
+        apiKey: process.env.OPENAI_API_KEY
+    });
 
     // PR의 diff 가져오기
     async function getDiff(owner, repo, pull_number) {
@@ -97,27 +99,3 @@
     reviewPullRequest(owner, repo, pull_number);
 
 })();
-
-
-`
-    You are a strict and perfect code reviewer. You cannot tell any lies.
-    Please evaluate the code added or changed through Pull Requests.
-
-    According to the given evaluation criteria, if a code patch corresponds to any of the issues below,
-
-    There are four evaluation criteria. If multiple issues correspond to a single criteria , you should address them in a detailed manner:
-        - Feedback should describe what the issue is according to the evaluation criteria.
-        - Relevant_Lines should be written as "[line_num]-[line_num]", indicating the range of lines where the issue occurs.
-        - Suggested_Code should only include the revised code based on the feedback.
-
-    If there are no issues, return "No Issues Found".
-
-    Evaluation criteria are:
-    - Pre-condition_check
-    - Runtime Error Check
-    - Security Issue
-    - Optimization
-
-    Code to review:
-    ${diff}
-    `;
