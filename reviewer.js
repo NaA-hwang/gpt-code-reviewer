@@ -10,6 +10,7 @@ import * as dotenv from 'dotenv';
 
     // GitHub와 OpenAI API 설정
     const octokit = new Octokit({
+        auth: process.env.GITHUB_TOKEN,
         request: {
             fetch: fetch,
         }
