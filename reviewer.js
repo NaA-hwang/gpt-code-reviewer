@@ -139,7 +139,9 @@ import * as dotenv from 'dotenv';
             // 각 블록별로 리뷰 생성 및 코멘트 게시
             for (const block of changes) {
                 const review = await generateReview(block); // 블록 자체 전달
-                await postReviewComment(owner, repo, pull_number, commit_id, block.file, block.start_position, review);
+                if (review) {
+                    await postReviewComment(owner, repo, pull_number, commit_id, block.file, block.start_position, review);
+                }
             }
 
             console.log("Review comments posted successfully!");
