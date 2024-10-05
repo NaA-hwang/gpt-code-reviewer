@@ -4,7 +4,7 @@ import * as dotenv from 'dotenv';
 (async () => {
     const { Octokit } = await import("@octokit/rest");
     const OpenAI = (await import("openai")).default;
-    
+
     // dotenv 설정
     dotenv.config();
 
@@ -18,37 +18,26 @@ import * as dotenv from 'dotenv';
 
     const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY
-    });;
+    });
 
-    // PR의 최신 커밋 SHA 가져오기
-    async function getCommitId(owner, repo, pull_number) {
-        const { data: commits } = await octokit.pulls.listCommits({
+    // 두 커밋 간의 변경 사항 가져오기 (compareCommits 사용)
+    async function getChanges(owner, repo, base, head) {
+        const { data } = await octokit.repos.compareCommits({
             owner,
             repo,
-            pull_number
-        });
-
-        // 최신 커밋의 SHA 반환
-        return commits[commits.length - 1].sha;
-    }
-
-    // PR의 diff 가져오기
-    async function getDiff(owner, repo, pull_number) {
-        const { data: files } = await octokit.pulls.listFiles({
-            owner,
-            repo,
-            pull_number
+            base,
+            head
         });
 
         let changes = [];
-        files.forEach(file => {
+        data.files.forEach(file => {
             if (file.patch) {
                 const patchLines = file.patch.split('\n');
                 let currentBlock = null;
 
                 patchLines.forEach((line, index) => {
                     if (line.startsWith('+') && !line.startsWith('+++')) {
-                        // 블록이 없으면 새 블록 시작
+                        // 새 블록 시작
                         if (!currentBlock) {
                             currentBlock = {
                                 file: file.filename,
@@ -84,6 +73,9 @@ import * as dotenv from 'dotenv';
         You should answer in Korean.
         You are a strict and perfect code reviewer. You cannot tell any lies.
         Please evaluate the code added or changed through Pull Requests.
+        There are two steps you need to follow:
+            First, provide a numbered summary of the changes made in the code patch.
+            Second, evaluate the code patch according to the evaluation criteria given below.
 
         According to the given evaluation criteria, if a code patch corresponds to any of the issues below, give the user a feedback.
 
@@ -103,7 +95,7 @@ import * as dotenv from 'dotenv';
         Your answer should be in Korean.
 
         Code to review:
-        ${block.lines.join('\n') }
+        ${block.lines.join('\n')}
         `;
 
         const response = await openai.chat.completions.create({
@@ -131,10 +123,10 @@ import * as dotenv from 'dotenv';
 
 
     // 전체 리뷰 생성 및 게시 프로세스
-    async function reviewPullRequest(owner, repo, pull_number) {
+    async function reviewPullRequest(owner, repo, pull_number, base, head) {
         try {
-            const commit_id = await getCommitId(owner, repo, pull_number); // 최신 커밋 SHA 가져오기
-            const changes = await getDiff(owner, repo, pull_number);
+            const commit_id = await getCommitId(owner, repo, head); // 최신 커밋 SHA 가져오기
+            const changes = await getChanges(owner, repo, base, head);  // 두 커밋 간 차이 가져오기
 
             // 각 블록별로 리뷰 생성 및 코멘트 게시
             for (const block of changes) {
@@ -154,7 +146,9 @@ import * as dotenv from 'dotenv';
     const owner = process.env.GITHUB_OWNER;  // GitHub 사용자 또는 조직 이름
     const repo = process.env.GITHUB_REPOSITORY_NAME;  // 리포지토리 이름
     const pull_number = process.env.GITHUB_PR_NUMBER;  // PR 번호
+    const base = process.env.GITHUB_BASE_COMMIT;  // 비교할 기준 커밋
+    const head = process.env.GITHUB_HEAD_COMMIT;  // 비교할 최신 커밋
 
-    reviewPullRequest(owner, repo, pull_number);
+    reviewPullRequest(owner, repo, pull_number, base, head);
 
 })();
