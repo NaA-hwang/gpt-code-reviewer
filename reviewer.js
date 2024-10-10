@@ -41,8 +41,7 @@ import * as dotenv from 'dotenv';
         const { data } = await octokit.repos.compareCommits({
             owner: owner,
             repo: repo,
-            base: base,
-            head: head
+            basehead: `${ base }...${ head }`
         });
         let { files: changedFiles, commits } = data.data;
         if (commits.length >= 2) {
