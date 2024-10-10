@@ -39,10 +39,10 @@ import * as dotenv from 'dotenv';
             : Infinity;
         // 두 커밋 간의 변경 사항 가져오기 (compareCommits 사용)
         const { data } = await octokit.repos.compareCommits({
-            owner,
-            repo,
-            base,
-            head
+            owner: owner,
+            repo: repo,
+            base: base,
+            head: head
         });
         let { files: changedFiles, commits } = data.data;
         if (commits.length >= 2) {
