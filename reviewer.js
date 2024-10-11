@@ -102,7 +102,12 @@ import * as dotenv from 'dotenv';
     async function codeReview(patch) {
         if (!patch) { return ''; }
         const prompt = generatePrompt(patch);
-        console.log(prompt)
+        // prompt가 문자열인지 확인
+        console.log(typeof prompt)
+        if (typeof prompt !== 'string') {
+            throw new Error("Generated prompt is not a string");
+        }
+
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [{ role: "system", content: prompt }],
