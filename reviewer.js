@@ -120,6 +120,8 @@ import * as dotenv from 'dotenv';
     const base = process.env.GITHUB_BASE_COMMIT;  // 비교할 기준 커밋
     const head = process.env.GITHUB_HEAD_COMMIT;  // 비교할 최신 커밋
     console.log(base)
+    console.log(head)
+    console.log(`${base}...${head}`)
 
     reviewPullRequest(owner, repo, pull_number, base, head);
 
