@@ -33,7 +33,7 @@ import * as dotenv from 'dotenv';
                 base: base,
                 head: head,
             })
-            let { files: changedFiles, commits } = data.data;
+            let { files: changedFiles, commits } = data;
             if (commits.length >= 2) {
                 const { data: { files }, } = await octokit.repos.compareCommits({
                     owner: owner,
