@@ -119,6 +119,7 @@ import * as dotenv from 'dotenv';
     const pull_number = process.env.GITHUB_PR_NUMBER;  // PR 번호
     const base = process.env.GITHUB_BASE_COMMIT;  // 비교할 기준 커밋
     const head = process.env.GITHUB_HEAD_COMMIT;  // 비교할 최신 커밋
+    print(base)
 
     reviewPullRequest(owner, repo, pull_number, base, head);
 
