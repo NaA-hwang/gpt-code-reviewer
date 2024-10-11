@@ -22,73 +22,81 @@ import * as dotenv from 'dotenv';
 
     // 전체 과정
     async function runReview(owner, repo, base, head, pull_number) {
-        const MAX_PATCH_COUNT = process.env.MAX_PATCH_LENGTH
-            ? +process.env.MAX_PATCH_LENGTH
-            : Infinity;
-        // 두 커밋 간의 변경 사항 가져오기 (compareCommits 사용)
-        const { data } = await octokit.request(`GET /repos/${owner}/${repo}/compare/${base}...${head}`, {
-            owner: owner,
-            repo: repo,
-            headers: {
-                'X-GitHub-Api-Version': '2022-11-28'
-            }
-        })
-        // const { data } = await octokit.repos.compareCommits({
-        //     owner: owner,
-        //     repo: repo,
-        //     basehead: `${base}...${head}`
-        // });
-        let { files: changedFiles, commits } = data.data;
-        if (commits.length >= 2) {
-            const { data: { files }, } = await octokit.request(`GET /repos/${owner}/${repo}/compare/${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`, {
+        try {
+            const MAX_PATCH_COUNT = process.env.MAX_PATCH_LENGTH
+                ? +process.env.MAX_PATCH_LENGTH
+                : Infinity;
+            // 두 커밋 간의 변경 사항 가져오기 (compareCommits 사용)
+            const { data } = await octokit.request(`GET /repos/{owner}/{repo}/compare/{basehead}`, {
                 owner: owner,
                 repo: repo,
+                basehead: `${base}...${head}`,
                 headers: {
                     'X-GitHub-Api-Version': '2022-11-28'
                 }
             })
-            // const { data: { files }, } = await octokit.repos.compareCommits({
+            // const { data } = await octokit.repos.compareCommits({
             //     owner: owner,
             //     repo: repo,
-            //     basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
-            // })
-            const ignoreList = (process.env.IGNORE || process.env.ignore || '')
-                .split('\n')
-                .filter((v) => v !== '');
-            const filesNames = files?.map((file) => file.filename) || [];
-            changedFiles = changedFiles?.filter((file) => filesNames.includes(file.filename) &&
-                !ignoreList.includes(file.filename));
-        }
-        if (!changedFiles?.length) {
-            console.log('no change found');
-            return 'no change';
-        }
-        // 변경사항이 있으면 각 변경사항마다 codeReview 진행
-        for (let i = 0; i < changedFiles.length; i++){
-            const file = changedFiles[i];
-            const patch = file.patch || '';
-            if (!patch || patch.length > MAX_PATCH_COUNT) {
-                console.log(`${file.filename} skipped caused by its diff is too large`);
-                continue;
+            //     basehead: `${base}...${head}`
+            // });
+            let { files: changedFiles, commits } = data.data;
+            if (commits.length >= 2) {
+                const { data: { files }, } = await octokit.request(`GET /repos/{owner}/{repo}/compare/{basehead}`, {
+                    owner: owner,
+                    repo: repo,
+                    basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
+                    headers: {
+                        'X-GitHub-Api-Version': '2022-11-28'
+                    }
+                })
+                // const { data: { files }, } = await octokit.repos.compareCommits({
+                //     owner: owner,
+                //     repo: repo,
+                //     basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
+                // })
+                const ignoreList = (process.env.IGNORE || process.env.ignore || '')
+                    .split('\n')
+                    .filter((v) => v !== '');
+                const filesNames = files?.map((file) => file.filename) || [];
+                changedFiles = changedFiles?.filter((file) => filesNames.includes(file.filename) &&
+                    !ignoreList.includes(file.filename));
             }
-            try {
-                const res = await codeReview(patch);
-                if (!!res) {
-                    await octokit.pulls.createReviewComment({
-                        repo: repo,
-                        owner: owner,
-                        pull_number: pull_number,
-                        commit_id: commits[commits.length - 1].sha,
-                        path: file.filename,
-                        body: res,
-                        position: patch.split('\n').length - 1,
-                    });
+            if (!changedFiles?.length) {
+                console.log('no change found');
+                return 'no change';
+            }
+            // 변경사항이 있으면 각 변경사항마다 codeReview 진행
+            for (let i = 0; i < changedFiles.length; i++) {
+                const file = changedFiles[i];
+                const patch = file.patch || '';
+                if (!patch || patch.length > MAX_PATCH_COUNT) {
+                    console.log(`${file.filename} skipped caused by its diff is too large`);
+                    continue;
                 }
-                console.log("Review comments posted successfully!");
+                try {
+                    const res = await codeReview(patch);
+                    if (!!res) {
+                        await octokit.pulls.createReviewComment({
+                            repo: repo,
+                            owner: owner,
+                            pull_number: pull_number,
+                            commit_id: commits[commits.length - 1].sha,
+                            path: file.filename,
+                            body: res,
+                            position: patch.split('\n').length - 1,
+                        });
+                    }
+                    console.log("Review comments posted successfully!");
+                }
+                catch (e) {
+                    console.error(`review ${file.filename} failed`, e);
+                }
             }
-            catch (e) {
-                console.error(`review ${file.filename} failed`, e);
-            }
+        } catch (error) {
+            console.error(`Error comparing commits: ${base}...${head}`);
+            console.error(error.message);
+            throw error; // 다시 예외를 던져서 상위 함수에서 처리할 수 있게함
         }
     }
 
