@@ -87,7 +87,7 @@ import * as dotenv from 'dotenv';
     }
 
     //프롬프트 생성 1단계
-    async function generatePrompt(patch) {
+    function generatePrompt(patch) {
 
         const prompt = `
         Answer me in Korean.
@@ -95,8 +95,6 @@ import * as dotenv from 'dotenv';
         Summarize what changes the code patch has.
         Any but risks and/or improvement suggestions are welcome:
         `
-        console.log("TYPEOF PATCH:::::", typeof patch)
-        console.log(patch)
         return `${prompt}, ${patch}`;
     }
 
@@ -108,7 +106,7 @@ import * as dotenv from 'dotenv';
         if (typeof prompt !== 'string') {
             throw new Error("Generated prompt is not a string");
         }
-
+        // 응답 생성
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [{ role: "system", content: prompt }],
