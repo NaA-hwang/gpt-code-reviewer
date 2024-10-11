@@ -5,18 +5,6 @@ import * as dotenv from 'dotenv';
     const { Octokit } = await import("@octokit/rest");
     const OpenAI = (await import("openai")).default;
 
-    // // PR의 최신 커밋 SHA 가져오기
-    // async function getCommitId(owner, repo, pull_number) {
-    //     const { data: commits } = await octokit.pulls.listCommits({
-    //         owner,
-    //         repo,
-    //         pull_number
-    //     });
-
-    //     // 최신 커밋의 SHA 반환
-    //     return commits[commits.length - 1].sha;
-    // }
-
     // dotenv 설정
     dotenv.config();
 
@@ -41,16 +29,14 @@ import * as dotenv from 'dotenv';
         const { data } = await octokit.repos.compareCommits({
             owner: owner,
             repo: repo,
-            base: base,
-            head: head
+            basehead: `${base}...${head}`
         });
         let { files: changedFiles, commits } = data.data;
         if (commits.length >= 2) {
             const { data: { files }, } = await octokit.repos.compareCommits({
                 owner: owner,
                 repo: repo,
-                base: commits[commits.length - 2].sha,
-                head: commits[commits.length - 1].sha,
+                basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
             })
             const ignoreList = (process.env.IGNORE || process.env.ignore || '')
                 .split('\n')
@@ -84,6 +70,7 @@ import * as dotenv from 'dotenv';
                         position: patch.split('\n').length - 1,
                     });
                 }
+                console.log("Review comments posted successfully!");
             }
             catch (e) {
                 console.error(`review ${file.filename} failed`, e);
@@ -93,34 +80,7 @@ import * as dotenv from 'dotenv';
 
     //프롬프트 생성 1단계
     async function generatePrompt(patch) {
-        const full_prompt_as_backup = `
-        You should answer in Korean.
-        You are a strict and perfect code reviewer. You cannot tell any lies.
-        Please evaluate the code added or changed through Pull Requests.
-        There are two steps you need to follow:
-            First, provide a numbered summary of the changes made in the code patch.
-            Second, evaluate the code patch according to the evaluation criteria given below.
 
-        According to the given evaluation criteria, if a code patch corresponds to any of the issues below, give the user a feedback.
-
-        There are four evaluation criteria. If multiple issues correspond to a single criteria, you should address them in a detailed manner:
-            - Feedback should describe what the issue is according to the evaluation criteria.
-            - Relevant_Lines should be written as "[line_num]-[line_num]", indicating the range of lines where the issue occurs.
-            - Suggested_Code should only include the revised code based on the feedback.
-
-        If there are no issues, DO NOT SAY ANYTHING. In that case, your asnwer has to be empty.
-
-        Evaluation criteria are:
-        - Pre-condition_check: Check whether a function or method has the correct state or range of values for the variables needed to operate properly.
-        - Runtime Error Check: Check code for potential runtime errors and identify other possible risks.
-        - Security Issue: Check if the code uses modules with serious security flaws or contains security vulnerabilities.
-        - Optimization: Check for optimization points in the code patch. If the code is deemed to have performance issues, recommend optimized code.
-
-        Your answer should be in Korean.
-
-        Code to review:
-        ${block.lines.join('\n')}
-        `;
         const prompt = `
         Answer me in Korean.
         Below is a code patch, please help me do a brief code review on it.
@@ -143,46 +103,11 @@ import * as dotenv from 'dotenv';
         return response.choices[0].message.content;
     }
 
-    // // OpenAI API를 통해 코드 리뷰 생성
-    // async function generateReview(block) {
-    //     const prompt = `
-    //     You should answer in Korean.
-    //     Your answer should be in Korean.
-
-    //     Code to review:
-    //     ${block.lines.join('\n')}
-    //     `;
-
-    //     const response = await openai.chat.completions.create({
-    //         model: "gpt-4",
-    //         messages: [{ role: "system", content: prompt }],
-    //         max_tokens: 1000,
-    //         temperature: 0,
-    //     });
-
-    //     return response.choices[0].message.content;
-    // }
-
-    // // PR에 리뷰 게시
-    // async function postReviewComment(owner, repo, pull_number, commit_id, file, start_position, review_body) {
-    //     await octokit.pulls.createReviewComment({
-    //         owner: owner,
-    //         repo: repo,
-    //         pull_number: pull_number,
-    //         body: review_body,
-    //         path: file,
-    //         position: start_position,  // 첫 라인의 위치
-    //         commit_id: commit_id  // 최신 커밋 SHA 추가
-    //     });
-    // }
-
 
     // 전체 리뷰 생성 및 게시 프로세스
     async function reviewPullRequest(owner, repo, pull_number, base, head) {
         try {
             runReview(owner, repo, pull_number, base, head) 
-
-            console.log("Review comments posted successfully!");
         } catch (error) {
             console.error("Error:", error);
         }
