@@ -102,6 +102,7 @@ import * as dotenv from 'dotenv';
     async function codeReview(patch) {
         if (!patch) { return ''; }
         const prompt = generatePrompt(patch);
+        console.log(prompt)
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [{ role: "system", content: prompt }],
