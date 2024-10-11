@@ -26,40 +26,44 @@ import * as dotenv from 'dotenv';
             ? +process.env.MAX_PATCH_LENGTH
             : Infinity;
         // 두 커밋 간의 변경 사항 가져오기 (compareCommits 사용)
-        const { data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{base}...{head}', {
-            owner: owner,
-            repo: repo,
-            base: base,
-            head: head
-        })
-        // const { data } = await octokit.repos.compareCommits({
-        //     owner: owner,
-        //     repo: repo,
-        //     basehead: `${base}...${head}`
-        // });
-        let { files: changedFiles, commits } = data.data;
-        if (commits.length >= 2) {
-            const { data: { files }, } = await octokit.request('GET /repos/{owner}/{repo}/compare/{base}...{head}', {
+        try {
+            const { data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{base}...{head}', {
                 owner: owner,
                 repo: repo,
-                base: commits[commits.length - 2].sha,
-                head: commits[commits.length - 1].sha
+                base: base,
+                head: head
             })
-            // const { data: { files }, } = await octokit.repos.compareCommits({
+            // const { data } = await octokit.repos.compareCommits({
             //     owner: owner,
             //     repo: repo,
-            //     basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
-            // })
-            const ignoreList = (process.env.IGNORE || process.env.ignore || '')
-                .split('\n')
-                .filter((v) => v !== '');
-            const filesNames = files?.map((file) => file.filename) || [];
-            changedFiles = changedFiles?.filter((file) => filesNames.includes(file.filename) &&
-                !ignoreList.includes(file.filename));
-        }
-        if (!changedFiles?.length) {
-            console.log('no change found');
-            return 'no change';
+            //     basehead: `${base}...${head}`
+            // });
+            let { files: changedFiles, commits } = data.data;
+            if (commits.length >= 2) {
+                const { data: { files }, } = await octokit.request('GET /repos/{owner}/{repo}/compare/{base}...{head}', {
+                    owner: owner,
+                    repo: repo,
+                    base: commits[commits.length - 2].sha,
+                    head: commits[commits.length - 1].sha
+                })
+                // const { data: { files }, } = await octokit.repos.compareCommits({
+                //     owner: owner,
+                //     repo: repo,
+                //     basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
+                // })
+                const ignoreList = (process.env.IGNORE || process.env.ignore || '')
+                    .split('\n')
+                    .filter((v) => v !== '');
+                const filesNames = files?.map((file) => file.filename) || [];
+                changedFiles = changedFiles?.filter((file) => filesNames.includes(file.filename) &&
+                    !ignoreList.includes(file.filename));
+            }
+            if (!changedFiles?.length) {
+                console.log('no change found');
+                return 'no change';
+            }
+        } catch (error) {
+            console.error("Error:", error);
         }
         // 변경사항이 있으면 각 변경사항마다 codeReview 진행
         for (let i = 0; i < changedFiles.length; i++){
@@ -131,9 +135,6 @@ import * as dotenv from 'dotenv';
     const pull_number = process.env.GITHUB_PR_NUMBER;  // PR 번호
     const base = process.env.GITHUB_BASE_COMMIT;  // 비교할 기준 커밋
     const head = process.env.GITHUB_HEAD_COMMIT;  // 비교할 최신 커밋
-    console.log(base)
-    console.log(head)
-    console.log(`${base}...${head}`)
 
     reviewPullRequest(owner, repo, pull_number, base, head);
 
