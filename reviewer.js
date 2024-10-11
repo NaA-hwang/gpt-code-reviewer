@@ -95,6 +95,8 @@ import * as dotenv from 'dotenv';
         Summarize what changes the code patch has.
         Any but risks and/or improvement suggestions are welcome:
         `
+        console.log("TYPEOF PATCH:::::", typeof patch)
+        console.log(patch)
         return `${prompt}, ${patch}`;
     }
 
@@ -103,7 +105,6 @@ import * as dotenv from 'dotenv';
         if (!patch) { return ''; }
         const prompt = generatePrompt(patch);
         // prompt가 문자열인지 확인
-        console.log(typeof prompt)
         if (typeof prompt !== 'string') {
             throw new Error("Generated prompt is not a string");
         }
