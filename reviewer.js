@@ -21,7 +21,7 @@ import * as dotenv from 'dotenv';
     });
 
     // 전체 과정
-    async function runReview(owner, repo, base, head, pull_number) {
+    async function runReview(owner, repo, pull_number, base, head) {
         try {
             const MAX_PATCH_COUNT = process.env.MAX_PATCH_LENGTH
                 ? +process.env.MAX_PATCH_LENGTH
