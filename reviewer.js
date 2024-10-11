@@ -88,14 +88,14 @@ import * as dotenv from 'dotenv';
 
     //프롬프트 생성 1단계
     function generatePrompt(patch) {
-
         const prompt = `
         Answer me in Korean.
         Below is a code patch, please help me do a brief code review on it.
         Summarize what changes the code patch has.
-        Any but risks and/or improvement suggestions are welcome:
+        Any but risks and/or improvement suggestions are welcome
         `
-        return `${prompt}, ${patch}`;
+        return `${prompt}
+        ${patch}`;
     }
 
     // 프롬프트 만들고 응답 받아오는 2단계
@@ -109,7 +109,35 @@ import * as dotenv from 'dotenv';
         // 응답 생성
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
-            messages: [{ role: "system", content: prompt }],
+            messages: [
+                {
+                    role: "system", content: `# Code Review Guidelines
+* You SHOULD answer in Korean.
+* You are a strict and thorough code reviewer. You must always provide honest feedback without any inaccuracies.
+* Evaluate the code added or modified through Pull Requests.
+* According to the evaluation criteria provided, if the code patch has any of the following issues, give the user feedback.
+* There are four evaluation criteria. If multiple issues fall under a single criterion, address them in detail.
+* Feedback format:
+    1. Issue Description: Describe the issue according to the evaluation criteria.
+    2. Relevant Lines: Specify the line range where the issue occurs in the format "[line_num]-[line_num]".
+    3. Suggested Code: Include the revised code based on the feedback.
+* If there are no issues, say that there is no issue.
+# Evaluation Criteria
+1. Pre-condition Check
+    * Verify whether a function or method has the correct state or range of values for variables needed to operate properly.
+2. Runtime Error Check
+    * Identify potential runtime errors and other risks in the code.
+3. Security Issue
+    * Detect the use of modules with serious security flaws or any security vulnerabilities in the code.
+4. Optimization
+    * Suggest optimized code if there are performance issues in the code patch.
+# Feedback Example
+* When an issue is identified:
+    * Issue Description: "The variable is used without a pre-condition check."
+    * Relevant Lines: "10-12"
+    * Suggested Code:`},
+                { role: "user", content: prompt }
+            ],
             max_tokens: 1000,
             temperature: 0,
         });
