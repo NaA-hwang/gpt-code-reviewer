@@ -27,34 +27,20 @@ import * as dotenv from 'dotenv';
                 ? +process.env.MAX_PATCH_LENGTH
                 : Infinity;
             // 두 커밋 간의 변경 사항 가져오기 (compareCommits 사용)
-            const { data } = await octokit.request(`GET /repos/{owner}/{repo}/compare/{basehead}`, {
+            const { data } = await octokit.repos.compareCommits({
                 owner: owner,
                 repo: repo,
-                basehead: `${base}...${head}`,
-                headers: {
-                    'X-GitHub-Api-Version': '2022-11-28'
-                }
+                base: base,
+                head: head,
             })
-            // const { data } = await octokit.repos.compareCommits({
-            //     owner: owner,
-            //     repo: repo,
-            //     basehead: `${base}...${head}`
-            // });
             let { files: changedFiles, commits } = data.data;
             if (commits.length >= 2) {
-                const { data: { files }, } = await octokit.request(`GET /repos/{owner}/{repo}/compare/{basehead}`, {
+                const { data: { files }, } = await octokit.repos.compareCommits({
                     owner: owner,
                     repo: repo,
-                    basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
-                    headers: {
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
+                    base: commits[commits.length - 2].sha,
+                    head: commits[commits.length - 1].sha
                 })
-                // const { data: { files }, } = await octokit.repos.compareCommits({
-                //     owner: owner,
-                //     repo: repo,
-                //     basehead: `${commits[commits.length - 2].sha}...${commits[commits.length - 1].sha}`,
-                // })
                 const ignoreList = (process.env.IGNORE || process.env.ignore || '')
                     .split('\n')
                     .filter((v) => v !== '');
