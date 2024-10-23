@@ -20,6 +20,14 @@ import * as dotenv from 'dotenv';
         apiKey: process.env.OPENAI_API_KEY
     });
 
+    // Get GitHub Actions permissions for an organization
+    await octokit.request('GET /orgs/{org}/actions/permissions', {
+        org: 'Woka-inc',
+        headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    })
+
     // 전체 과정
     async function runReview(owner, repo, pull_number, base, head) {
         try {
